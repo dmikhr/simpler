@@ -33,9 +33,13 @@ module Simpler
     end
 
     def write_response
-      body = render_body
-
-      @response.write(body)
+      # рендерим view только если в body ничего нет
+      # проверка на случай если был вызван render_plain и уже заполнил @response.body
+      # https://www.rubydoc.info/gems/rack/Rack/Response#body-instance_method
+      if @response.body.empty?
+        body = render_body
+        @response.write(body)
+      end
     end
 
     def render_body
@@ -47,7 +51,26 @@ module Simpler
     end
 
     def render(template)
-      @request.env['simpler.template'] = template
+      # есть ли в template ключ :plain
+      if template.key?(:plain)
+        render_plain(template[:plain])
+      else
+        @request.env['simpler.template'] = template
+      end
+    end
+
+    def render_plain(template)
+      headers 'text/plain'
+      @response.write(template)
+    end
+
+    # https://www.rubydoc.info/gems/rack/Rack/Response#status-instance_method
+    def status(value)
+      @response.status = value
+    end
+
+    def headers(header_type)
+      @response['Content-Type'] = header_type
     end
 
   end
