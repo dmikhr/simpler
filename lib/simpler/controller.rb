@@ -47,7 +47,8 @@ module Simpler
     end
 
     def params
-      @request.params
+      # @request.params - хеш, добавляем в него параметр id
+      @request.params.merge(@request.env['simpler.params'])
     end
 
     def render(template)

@@ -6,11 +6,15 @@ class TestsController < Simpler::Controller
     # headers 'text/text'
     # headers 'text/html'
     # передаем с метод render хеш с ключом :plain и текстовым значением
-    render plain: 'Test text'
+    # render plain: 'Test text'
   end
 
   def create
 
+  end
+
+  def show
+    @params = params
   end
 
 end
