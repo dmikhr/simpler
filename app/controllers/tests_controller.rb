@@ -5,8 +5,11 @@ class TestsController < Simpler::Controller
     # status 302
     # headers 'text/text'
     # headers 'text/html'
-    # передаем с метод render хеш с ключом :plain и текстовым значением
-    # render plain: 'Test text'
+    # передаем в метод render хеш с ключом и текстовым значением
+    # render plain: 'Test text plain'
+    # render html: '<b>Hello!</b>'
+    # render 'tests/list'
+    # render zip: 'str' # несуществующий ключ - приведет к http error 500
   end
 
   def create
@@ -15,6 +18,11 @@ class TestsController < Simpler::Controller
 
   def show
     @params = params
+  end
+
+  def manage
+    @params = params
+    render json: ''
   end
 
 end

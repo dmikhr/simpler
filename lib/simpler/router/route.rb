@@ -2,18 +2,23 @@ module Simpler
   class Router
     class Route
 
-      attr_reader :controller, :action, :params
+      attr_reader :controller, :action
 
       def initialize(method, path, controller, action)
         @method = method
         @path = path
         @controller = controller
         @action = action
-        @params = {}
       end
 
       def match?(method, path)
         @method == method && path_match(path)
+      end
+
+      # возвращаем параметры без сохранения в инстанс-переменную
+      def params(env)
+        path = env['PATH_INFO']
+        path_match(path)
       end
 
       private
@@ -21,15 +26,9 @@ module Simpler
       def path_match(path)
         request_path_elements = split_path(path)
         route_path_elements = split_path(@path)
-        # если запрос полностью совпадает с роутом (например: /tests - /tests) - то возвращаем true
-        return true if request_full_match_route?(request_path_elements, route_path_elements)
-        # если запрос сложный (/tests/1), проверяем на совпадение шаблону запроса (/tests/:id - /tests/1)
-        return false unless request_match_route?(request_path_elements, route_path_elements)
-        # если шаблон подходит, проверяем наличие в нем параметра и извлекаем его при наличии
-        manage_params(request_path_elements, route_path_elements)
+        extract_params(request_path_elements, route_path_elements) if request_match_route?(request_path_elements, route_path_elements)
       end
 
-      # 'path=/tests/, @path=/tests', 'path=/tests/101, @path=/tests'
       def split_path(path)
         path = path.split('/')
         # убираем пустые элементы ["", "tests", "1"] -> ["tests", "1"]
@@ -37,21 +36,27 @@ module Simpler
         path
       end
 
-      def manage_params(request, route)
-        potential_param = route.last
-        if potential_param[0] == ':'
-          # :id -> id
-          param = potential_param[1, potential_param.size]
-          @params[param.to_sym] = request.last
-        end
+      def extract_params(request, route)
+        params = route.select { |param| param[0] == ':' }
+        # индексы элементов роута, в которых находятся параметры (для извлечения значений параметров из запроса)
+        params_idx = route.each_index.select { |i| route[i][0] == ':' }
+        # соответствующие параметры в запросе (у них тот же индекс)
+        values = request.select{ |elem| params_idx.include?(request.find_index(elem)) }
+        # убираем : из параметров, чтобы была корректная конвертация из строки в символ
+        params.map!{ |param| param[1, param.size] }
+        # собираем массивы параметров и их значений в хеш
+        Hash[params.map(&:to_sym).zip(values)]
       end
 
       def request_match_route?(request, route)
-        request.first == route.first && request.count == route.count
-      end
-
-      def request_full_match_route?(request, route)
-        request_match_route?(request, route) && request.count == 1
+        if request.count == route.count
+          # индексы элементов роута, не являющиеся параметрами
+          route_path_parts_idx = route.each_index.select { |i| route[i][0] != ':' }
+          # проверяем, что они находятся на тех же местах в пути запроса, что и в шаблоне
+          # например: tests/:id/data/:day/show - tests/1/data/10/show
+          # элементы tests, data и show в обоих случаях должны быть в позициях 0, 2, 4
+          route_path_parts_idx.select { |i| request[i] == route[i] }.count == route_path_parts_idx.count
+        end
       end
     end
   end
