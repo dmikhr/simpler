@@ -37,15 +37,12 @@ module Simpler
       end
 
       def extract_params(request, route)
-        params = route.select { |param| param[0] == ':' }
+        # выделяем из роута параметры и конвертируем в символы
+        params = route.select { |param| param[0] == ':' }.map{ |param| param.delete_prefix(':') }.map(&:to_sym)
         # индексы элементов роута, в которых находятся параметры (для извлечения значений параметров из запроса)
         params_idx = route.each_index.select { |i| route[i][0] == ':' }
-        # соответствующие параметры в запросе (у них тот же индекс)
-        values = request.select{ |elem| params_idx.include?(request.find_index(elem)) }
-        # убираем : из параметров, чтобы была корректная конвертация из строки в символ
-        params.map!{ |param| param[1, param.size] }
         # собираем массивы параметров и их значений в хеш
-        Hash[params.map(&:to_sym).zip(values)]
+        Hash[params.zip(request.values_at(*params_idx))]
       end
 
       def request_match_route?(request, route)
@@ -55,7 +52,7 @@ module Simpler
           # проверяем, что они находятся на тех же местах в пути запроса, что и в шаблоне
           # например: tests/:id/data/:day/show - tests/1/data/10/show
           # элементы tests, data и show в обоих случаях должны быть в позициях 0, 2, 4
-          route_path_parts_idx.select { |i| request[i] == route[i] }.count == route_path_parts_idx.count
+          request.values_at(*route_path_parts_idx) == route.values_at(*route_path_parts_idx)
         end
       end
     end

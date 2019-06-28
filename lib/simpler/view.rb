@@ -1,4 +1,5 @@
 require 'erb'
+require 'active_support/all'
 require_relative 'renders/render'
 require_relative 'renders/plain_render'
 require_relative 'renders/html_render'
@@ -16,8 +17,8 @@ module Simpler
     def render(binding)
       if render_class && render_class != 'file'
         # динамически создаем инстанс нужного класса (например PlainRender)
-        # и делегируем метод render
-        Object.const_get("#{render_class.capitalize}Render").new(template, binding).render
+        # через метод constantize из ActiveSupport и делегируем метод render
+        "#{render_class.capitalize}Render".constantize.new(template, binding).render
       else
         # вариант по умолчанию, если render не задан в контроллере или задан путь к файлу
         render_file(binding)
