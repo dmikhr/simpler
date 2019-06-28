@@ -27,11 +27,19 @@ module Simpler
     end
 
     def call(env)
+      # puts "ENV #{env['REQUEST_METHOD']} #{env['PATH_INFO']}"
       route = @router.route_for(env)
-      controller = route.controller.new(env)
-      action = route.action
-
-      make_response(controller, action)
+      #puts "ROUTE #{route.nil?}"
+      if route.nil?
+        # если route не найден, возвращаем Rack ответ [status, headers, body]
+        [404, { 'Content-Type' => 'text/plain' }, ["Error 404: Path #{env['PATH_INFO']} not found"]]
+      else
+        # параметры в момент обращения к .params доступные в env
+        env['simpler.params'] = route.params(env)
+        controller = route.controller.new(env)
+        action = route.action
+        make_response(controller, action)
+      end
     end
 
     private
